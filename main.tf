@@ -34,8 +34,7 @@ resource "libvirt_domain" "ubuntu1" {
   autostart = false
 
   disk {
-    # volume_id = libvirt_volume.ubuntu1.id
-    file = "${libvirt_pool.home_server.path}/${libvirt_volume.ubuntu1.name}"
+    volume_id = libvirt_volume.ubuntu_base.id
   }
 
   cloudinit = libvirt_cloudinit_disk.cloud_init.id
@@ -57,19 +56,12 @@ resource "libvirt_domain" "ubuntu1" {
   }
 }
 
-resource "libvirt_volume" "ubuntu1" {
-  name = "ubuntu1.qcow2"
-  pool = libvirt_pool.home_server.name
-  # size = 32212254720
-  base_volume_name = libvirt_volume.ubuntu_base.name
-  base_volume_pool = libvirt_pool.home_server.name
-}
-
 ####################################################################################################
 
 resource "libvirt_volume" "ubuntu_base" {
-  name   = "jammy-server-cloudimg-amd64-disk-kvm.img"
+  name   = "ubuntu1.qcow2"
   source = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64-disk-kvm.img"
+  format = "qcow2"
   pool   = libvirt_pool.home_server.name
 }
 
@@ -78,7 +70,7 @@ resource "libvirt_volume" "ubuntu_base" {
 resource "libvirt_cloudinit_disk" "cloud_init" {
   name      = "cloud_init.iso"
   user_data = data.template_file.user_data.rendered
-  pool      = "boot"
+  pool      = libvirt_pool.home_server.name
 }
 
 data "template_file" "user_data" {
