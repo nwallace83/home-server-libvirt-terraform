@@ -1,0 +1,54 @@
+#cloud-config
+# vim: syntax=yaml
+#
+# ***********************
+# 	---- for more examples look at: ------
+# ---> https://cloudinit.readthedocs.io/en/latest/topics/examples.html
+# ******************************
+#
+# This is the configuration syntax that the write_files module
+# will know how to understand. encoding can be given b64 or gzip or (gz+b64).
+# The content will be decoded accordingly and then written to the path that is
+# provided.
+#
+# Note: Content strings here are truncated for example purposes.
+ssh_pwauth: False
+hostname: ${hostname}
+users:
+- default
+- name: nate
+  passwd: ${user_password}
+  shell: /bin/bash
+  lock-passwd: false
+  ssh_pwauth: True
+  chpasswd: {expire: False}
+  sudo: ALL=(ALL) NOPASSWD:ALL
+  groups: users, admin
+  ssh_authorized_keys:
+  - "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA0AxLRybvOwgzQD/moyyBLWc5rlDKD3siAkiJrCMR6yqo0VecdpAYYE8QvxUvyXe43kDMEyxULiIn9DaJW1uhLgYg4p74clKtWBlCuJumwjifM7nm/oiD3UxgIiSKn/crXUWuABRnvMDp3vSuYBcYAQ8IZpvAGxb52i15CRFdWtyM0CMTSkGsFrFy8XKZl4nNeaQv2ZNuD+cY0iyL3TQ5BQ7kvWc+4EHDgqi+GqqIdBhPsyYCYgTwRLiLTTcKq1XbVteLFzpcG283qjA02WyBlR3/aYO4TXP+PTIp24vu/8WlXKrbz6oSLelosFZ7Jz2g9HBd0ntO+HBR57zaxeLF6Q=="
+- name: root
+  ssh_authorized_keys:
+  - "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA0AxLRybvOwgzQD/moyyBLWc5rlDKD3siAkiJrCMR6yqo0VecdpAYYE8QvxUvyXe43kDMEyxULiIn9DaJW1uhLgYg4p74clKtWBlCuJumwjifM7nm/oiD3UxgIiSKn/crXUWuABRnvMDp3vSuYBcYAQ8IZpvAGxb52i15CRFdWtyM0CMTSkGsFrFy8XKZl4nNeaQv2ZNuD+cY0iyL3TQ5BQ7kvWc+4EHDgqi+GqqIdBhPsyYCYgTwRLiLTTcKq1XbVteLFzpcG283qjA02WyBlR3/aYO4TXP+PTIp24vu/8WlXKrbz6oSLelosFZ7Jz2g9HBd0ntO+HBR57zaxeLF6Q=="
+
+write_files:
+- encoding: b64
+  content: ${id_rsa}
+  owner: root:root
+  path: /tmp/id_rsa
+  permissions: '0600'
+- encoding: b64
+  content: "IyBUaGlzIHNlY3Rpb24gaW5jbHVkZXMgYmFzZSBDYWxpY28gaW5zdGFsbGF0aW9uIGNvbmZpZ3VyYXRpb24uCiMgRm9yIG1vcmUgaW5mb3JtYXRpb24sIHNlZTogaHR0cHM6Ly9wcm9qZWN0Y2FsaWNvLmRvY3MudGlnZXJhLmlvL21hc3Rlci9yZWZlcmVuY2UvaW5zdGFsbGF0aW9uL2FwaSNvcGVyYXRvci50aWdlcmEuaW8vdjEuSW5zdGFsbGF0aW9uCmFwaVZlcnNpb246IG9wZXJhdG9yLnRpZ2VyYS5pby92MQpraW5kOiBJbnN0YWxsYXRpb24KbWV0YWRhdGE6CiAgbmFtZTogZGVmYXVsdApzcGVjOgogICMgQ29uZmlndXJlcyBDYWxpY28gbmV0d29ya2luZy4KICBjYWxpY29OZXR3b3JrOgogICAgIyBOb3RlOiBUaGUgaXBQb29scyBzZWN0aW9uIGNhbm5vdCBiZSBtb2RpZmllZCBwb3N0LWluc3RhbGwuCiAgICBpcFBvb2xzOgogICAgLSBibG9ja1NpemU6IDI2CiAgICAgIGNpZHI6IDEwLjI0NC4wLjAvMTYKICAgICAgZW5jYXBzdWxhdGlvbjogVlhMQU5Dcm9zc1N1Ym5ldAogICAgICBuYXRPdXRnb2luZzogRW5hYmxlZAogICAgICBub2RlU2VsZWN0b3I6IGFsbCgpCgotLS0KCiMgVGhpcyBzZWN0aW9uIGNvbmZpZ3VyZXMgdGhlIENhbGljbyBBUEkgc2VydmVyLgojIEZvciBtb3JlIGluZm9ybWF0aW9uLCBzZWU6IGh0dHBzOi8vcHJvamVjdGNhbGljby5kb2NzLnRpZ2VyYS5pby9tYXN0ZXIvcmVmZXJlbmNlL2luc3RhbGxhdGlvbi9hcGkjb3BlcmF0b3IudGlnZXJhLmlvL3YxLkFQSVNlcnZlcgphcGlWZXJzaW9uOiBvcGVyYXRvci50aWdlcmEuaW8vdjEKa2luZDogQVBJU2VydmVyCm1ldGFkYXRhOgogIG5hbWU6IGRlZmF1bHQKc3BlYzoge30KCg=="
+  owner: root:root
+  path: /tmp/custom-resources.yaml
+  permissions: '0644'
+- encoding: b64
+  content: ${bootstrap_script}
+  owner: root:root
+  path: /tmp/bootstrap.sh
+  permissions: '0644'
+
+package_upgrade: true
+
+runcmd:
+- chmod +x /tmp/bootstrap.sh
+- /tmp/bootstrap.sh ${create_cluster} ${hostname} >> /var/log/bootstrap.log 2>&1

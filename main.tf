@@ -7,7 +7,7 @@ resource "libvirt_pool" "home_server" {
 ####################################################################################################
 
 resource "libvirt_network" "home-server" {
-  name   = "home_server"
+  name   = "home-server"
   mode   = "nat"
   domain = "k8s.local"
 
@@ -27,59 +27,26 @@ resource "libvirt_network" "home-server" {
 
 ####################################################################################################
 
-resource "libvirt_domain" "ubuntu1" {
-  name      = "ubuntu1"
-  memory    = 2048
-  vcpu      = 2
-  autostart = false
-
-  disk {
-    volume_id = libvirt_volume.ubuntu_base.id
-  }
-
-  cloudinit = libvirt_cloudinit_disk.cloud_init.id
-
-  network_interface {
-    network_id = libvirt_network.home-server.id
-    hostname   = "ubuntu1"
-    addresses  = ["192.168.1.5"]
-  }
-
-  cpu {
-    mode = "host-passthrough"
-  }
-
-  graphics {
-    type        = "vnc"
-    listen_type = "address"
-    websocket   = "-1"
-  }
-
-  console {
-    type        = "pty"
-    target_port = "0"
-    target_type = "serial"
-  }
-
-}
-
-####################################################################################################
-
 resource "libvirt_volume" "ubuntu_base" {
-  name   = "ubuntu1.qcow2"
-  source = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64-disk-kvm.img"
-  format = "qcow2"
+  name   = "jammy-server-cloudimg-amd64.img"
+  source = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
   pool   = libvirt_pool.home_server.name
 }
 
 ####################################################################################################
 
-resource "libvirt_cloudinit_disk" "cloud_init" {
-  name      = "cloud_init.iso"
-  user_data = data.template_file.user_data.rendered
-  pool      = libvirt_pool.home_server.name
+module "nodes" {
+  source = "./nodes"
+  
+  network_id = libvirt_network.home-server.id
+  id_rsa = var.id_rsa
+  user_password = var.user_password
+  pool = libvirt_pool.home_server.name
+  ubuntu_base_image = libvirt_volume.ubuntu_base.name
 }
 
-data "template_file" "user_data" {
-  template = file("${path.module}/cloud_init.cfg")
+####################################################################################################
+
+module "haproxy" {
+  source = "./haproxy"
 }
