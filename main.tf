@@ -54,6 +54,13 @@ resource "libvirt_domain" "ubuntu1" {
     listen_type = "address"
     websocket   = "-1"
   }
+
+  console {
+    type        = "pty"
+    target_port = "0"
+    target_type = "serial"
+  }
+
 }
 
 ####################################################################################################
