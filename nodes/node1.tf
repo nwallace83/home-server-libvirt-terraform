@@ -1,6 +1,6 @@
 resource "libvirt_domain" "node1" {
   name      = "node1.k8s.local"
-  memory    = 1024
+  memory    = 2048
   vcpu      = 4
   autostart = true
 
@@ -63,10 +63,13 @@ data "template_file" "user_data_node1" {
 
   vars = {
     user_password    = var.user_password
-    hostname         = "node1.k8s.local"
+    hostname         = "node1"
     bootstrap_script = filebase64("${path.root}/files/bootstrap.sh")
     id_rsa           = filebase64(var.id_rsa)
+    argo_ingress     = filebase64("${path.root}/files/argo-ingress.yaml")
     create_cluster   = "false"
+    control_plane    = "false"
+    seed_host        = "controlplane1"
   }
 }
 

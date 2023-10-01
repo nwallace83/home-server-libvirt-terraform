@@ -12,3 +12,6 @@ variable "pool" {
 
 variable "ubuntu_base_image" {
 }
+
+variable "create_cluster" {
+}

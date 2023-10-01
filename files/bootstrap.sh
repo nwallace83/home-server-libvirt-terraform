@@ -1,5 +1,10 @@
-#!/bin/bash -x
+#!/bin/bash
+CREATE_CLUSTER=$1
+CONTROL_PLANE=$2
+SEED_HOST=$3
+HOSTNAME=$4
 
+echo "~~~~~~~~~~Adding SSH keys to user~~~~~~~~~~"
 mkdir -p /home/nate/.ssh
 cp /tmp/id_rsa /home/nate/.ssh
 chown -Rf nate:nate /home/nate
@@ -8,8 +13,11 @@ mkdir -p /root/.ssh
 cp /tmp/id_rsa /root/.ssh
 chown -Rf root:root /root
 
-hostnamectl set-hostname $2
+echo "~~~~~~~~~~Setting up hostname and hosts files~~~~~~~~~~"
+hostnamectl set-hostname $HOSTNAME
+echo "192.168.0.5 server server.local" >> /etc/hosts
   
+echo "~~~~~~~~~~Settings up OS modules~~~~~~~~~~"
 tee /etc/modules-load.d/containerd.conf <<EOF
 overlay
 br_netfilter
@@ -25,6 +33,8 @@ net.ipv4.ip_forward = 1
 EOF
 
 sysctl --system
+
+echo "~~~~~~~~~~Adding repositories and downloading required software~~~~~~~~~~"
 apt install -y curl gnupg2 software-properties-common apt-transport-https ca-certificates
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmour -o /etc/apt/trusted.gpg.d/docker.gpg
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
@@ -39,35 +49,90 @@ systemctl restart containerd
 systemctl enable containerd
 
 
-if [ "$1" == "true" ]
+if [ "$CREATE_CLUSTER" == "true" ]
 then
   echo "~~~~~~~~~~SEEDING NEW CLUSTER~~~~~~~~~~"
   kubeadm config images pull
-  kubeadm init --control-plane-endpoint=controlplane1.k8s.local --pod-network-cidr=10.244.0.0/16
+  kubeadm init --control-plane-endpoint=server.local:8443 --pod-network-cidr=10.244.0.0/16
+
   mkdir -p /home/nate/.kube
   cp /etc/kubernetes/admin.conf /home/nate/.kube/config
   chown -Rf nate:nate /home/nate
-  kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/tigera-operator.yaml
-  kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f /tmp/custom-resources.yaml
-else
-  echo echo "~~~~~~~~~~JOINING CLUSTER~~~~~~~~~~"
-  CLUSTER_STATUS="NotReady"
 
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+  kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/tigera-operator.yaml
+  kubectl create -f /tmp/custom-resources.yaml
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+  CLUSTER_STATUS="NotReady"
   while [ "$CLUSTER_STATUS" != "Ready" ]
   do
-    ssh -o StrictHostKeychecking=no -t controlplane1 "kubeadm token list"
-    if [ $? -eq 0 ]
-    then
-      CLUSTER_STATUS=$(ssh -o StrictHostKeychecking=no -t controlplane1 "kubectl --kubeconfig=/etc/kubernetes/admin.conf get nodes | grep controlplane1 | awk '{ print \$2 }'")
-    else
-      sleep 20
-    fi
+    echo "Waiting for $HOSTNAME to be ready"
+    CLUSTER_STATUS=$(kubectl get nodes | grep $HOSTNAME | awk '{ print $2 }' 2>/dev/null)
+    sleep 5
   done
 
-  JOIN_COMMAND=$(ssh -o StrictHostKeychecking=no -t controlplane1 "kubeadm token create --print-join-command")
-  ENDPOINT=$(echo $JOIN_COMMAND | awk '{print $3}')
-  TOKEN=$(echo $JOIN_COMMAND | awk '{print $5}')
-  CA_HASH=$(echo $JOIN_COMMAND | awk '{print $7}')
+  kubectl create namespace ingress-nginx
+  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+  helm install --set controller.service.type=NodePort \
+    --set controller.service.nodePorts.http=32080 \
+    --set controller.service.nodePorts.https=32443 \
+    ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx
+  
+  kubectl create namespace argo-cd
+  helm repo add argo-cd https://argoproj.github.io/argo-helm
+  helm install --set server.server.extraArgs="--insecure" argo-cd argo-cd/argo-cd -n argo-cd
+  kubectl apply -f /tmp/arg-ingress.yaml -n argo-cd
+  
+  kubectl create namespace cert-manager
+  helm repo add cert-manager https://charts.jetstack.io
+  helm install cert-manager cert-manager/cert-manager -n cert-manager
 
+
+  exit 0
+fi
+
+echo "~~~~~~~~~~JOINING CLUSTER~~~~~~~~~~"
+CLUSTER_STATUS="NotReady"
+
+while [ "$CLUSTER_STATUS" != "Ready" ]
+do
+  ssh -o StrictHostKeychecking=no -t $SEED_HOST "kubeadm token list" >/dev/null 2>&1
+  if [ $? -eq 0 ]
+  then
+    sleep 5
+    CLUSTER_STATUS=$(ssh -o StrictHostKeychecking=no -t $SEED_HOST "kubectl --kubeconfig=/etc/kubernetes/admin.conf get nodes | grep $SEED_HOST | awk '{ print \$2 }'" 2>/dev/null)
+    echo "Waiting for $SEED_HOST to be ready"
+  else
+    echo "Waiting for $SEED_HOST to be ready"
+    sleep 20
+  fi
+done
+
+JOIN_COMMAND=$(ssh -o StrictHostKeychecking=no -t $SEED_HOST "kubeadm token create --print-join-command" 2>/dev/null)
+ENDPOINT=$(echo $JOIN_COMMAND | awk '{print $3}')
+TOKEN=$(echo $JOIN_COMMAND | awk '{print $5}')
+CA_HASH=$(echo $JOIN_COMMAND | awk '{print $7}')
+
+if [ "$CONTROL_PLANE" != "true" ]
+then
   kubeadm join $ENDPOINT --token $TOKEN --discovery-token-ca-cert-hash $CA_HASH
+else
+ mkdir -p /etc/kubernetes/pki/etcd
+  scp -o StrictHostKeychecking=no $SEED_HOST:/etc/kubernetes/pki/ca.crt /etc/kubernetes/pki/ca.crt
+  scp -o StrictHostKeychecking=no $SEED_HOST:/etc/kubernetes/pki/ca.key /etc/kubernetes/pki/ca.key
+  scp -o StrictHostKeychecking=no $SEED_HOST:/etc/kubernetes/pki/sa.pub /etc/kubernetes/pki/sa.pub
+  scp -o StrictHostKeychecking=no $SEED_HOST:/etc/kubernetes/pki/sa.key /etc/kubernetes/pki/sa.key
+  scp -o StrictHostKeychecking=no $SEED_HOST:/etc/kubernetes/pki/front-proxy-ca.crt /etc/kubernetes/pki/front-proxy-ca.crt
+  scp -o StrictHostKeychecking=no $SEED_HOST:/etc/kubernetes/pki/front-proxy-ca.key /etc/kubernetes/pki/front-proxy-ca.key
+  scp -o StrictHostKeychecking=no $SEED_HOST:/etc/kubernetes/pki/etcd/ca.crt /etc/kubernetes/pki/etcd/ca.crt
+  scp -o StrictHostKeychecking=no $SEED_HOST:/etc/kubernetes/pki/etcd/ca.key /etc/kubernetes/pki/etcd/ca.key
+
+  kubeadm config images pull
+  kubeadm join $ENDPOINT --token $TOKEN --discovery-token-ca-cert-hash $CA_HASH --control-plane 
+
+  mkdir -p /home/nate/.kube
+  cp /etc/kubernetes/admin.conf /home/nate/.kube/config
+  chown -Rf nate:nate /home/nate
 fi

@@ -43,6 +43,7 @@ module "nodes" {
   user_password = var.user_password
   pool = libvirt_pool.home_server.name
   ubuntu_base_image = libvirt_volume.ubuntu_base.name
+  create_cluster = var.create_cluster
 }
 
 ####################################################################################################
@@ -50,3 +51,10 @@ module "nodes" {
 module "haproxy" {
   source = "./haproxy"
 }
+
+####################################################################################################
+
+module "nginx" {
+  source = "./nginx"
+}
+

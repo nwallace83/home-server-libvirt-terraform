@@ -13,7 +13,7 @@ resource "libvirt_domain" "controlplane1" {
   network_interface {
     network_id = var.network_id
     mac        = "52:54:00:ba:aa:0e"
-    addresses  = [ "192.168.1.5" ]
+    addresses  = ["192.168.1.5"]
   }
 
   cpu {
@@ -63,10 +63,13 @@ data "template_file" "user_data_controlplane1" {
 
   vars = {
     user_password    = var.user_password
-    hostname         = "controlplane1.k8s.local"
+    hostname         = "controlplane1"
     bootstrap_script = filebase64("${path.root}/files/bootstrap.sh")
     id_rsa           = filebase64(var.id_rsa)
-    create_cluster   = "true"
+    argo_ingress     = filebase64("${path.root}/files/argo-ingress.yaml")
+    create_cluster   = var.create_cluster
+    control_plane    = "true"
+    seed_host        = "controlplane2"
   }
 }
 
