@@ -1,7 +1,7 @@
 resource "libvirt_domain" "node1" {
   name      = "node1.k8s.local"
-  memory    = 2048
-  vcpu      = 4
+  memory    = 8192
+  vcpu      = 8
   autostart = true
 
   disk {

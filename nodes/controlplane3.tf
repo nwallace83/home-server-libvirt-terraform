@@ -1,19 +1,19 @@
-resource "libvirt_domain" "controlplane1" {
-  name      = "controlplane1.k8s.local"
+resource "libvirt_domain" "controlplane3" {
+  name      = "controlplane3.k8s.local"
   memory    = 2048
   vcpu      = 2
   autostart = true
 
   disk {
-    volume_id = libvirt_volume.controlplane1.id
+    volume_id = libvirt_volume.controlplane3.id
   }
 
-  cloudinit = libvirt_cloudinit_disk.disk_controlplane1.id
+  cloudinit = libvirt_cloudinit_disk.disk_controlplane3.id
 
   network_interface {
     network_id = var.network_id
-    mac        = "52:54:00:ba:aa:0e"
-    addresses  = ["192.168.1.5"]
+    mac        = "52:54:00:ba:aa:2e"
+    addresses  = ["192.168.1.7"]
   }
 
   cpu {
@@ -41,8 +41,8 @@ resource "libvirt_domain" "controlplane1" {
 
 ####################################################################################################
 
-resource "libvirt_volume" "controlplane1" {
-  name             = "controlplane1.qcow2"
+resource "libvirt_volume" "controlplane3" {
+  name             = "controlplane3.qcow2"
   pool             = var.pool
   size             = 32212254720
   base_volume_name = var.ubuntu_base_image
@@ -51,29 +51,29 @@ resource "libvirt_volume" "controlplane1" {
 
 ####################################################################################################
 
-resource "libvirt_cloudinit_disk" "disk_controlplane1" {
-  name           = "cloud_init_controlplane1.iso"
-  user_data      = data.template_file.user_data_controlplane1.rendered
-  network_config = data.template_file.network_config_controlplane1.rendered
+resource "libvirt_cloudinit_disk" "disk_controlplane3" {
+  name           = "cloud_init_controlplane3.iso"
+  user_data      = data.template_file.user_data_controlplane3.rendered
+  network_config = data.template_file.network_config_controlplane3.rendered
   pool           = var.pool
 }
 
-data "template_file" "user_data_controlplane1" {
+data "template_file" "user_data_controlplane3" {
   template = file("${path.root}/files/user_data.yaml")
 
   vars = {
     user_password    = var.user_password
-    hostname         = "controlplane1"
+    hostname         = "controlplane3"
     bootstrap_script = filebase64("${path.root}/files/bootstrap.sh")
     id_rsa           = filebase64(var.id_rsa)
     argo_ingress     = filebase64("${path.root}/files/argo-ingress.yaml")
     cluster_issuer   = filebase64("${path.root}/files/cluster-issuer.yaml")
-    create_cluster   = var.create_cluster
+    create_cluster   = "false"
     control_plane    = "true"
-    seed_host        = "controlplane2"
+    seed_host        = "controlplane1"
   }
 }
 
-data "template_file" "network_config_controlplane1" {
+data "template_file" "network_config_controlplane3" {
   template = file("${path.root}/files/network_config.yaml")
 }

@@ -3,6 +3,8 @@ CREATE_CLUSTER=$1
 CONTROL_PLANE=$2
 SEED_HOST=$3
 HOSTNAME=$4
+API_ENDPOINT="server.local:6443"
+POD_CIDR="10.244.0.0/16"
 
 echo "~~~~~~~~~~Adding SSH keys customizing environment~~~~~~~~~~"
 mkdir -p /home/nate/.ssh
@@ -58,7 +60,7 @@ if [ "$CREATE_CLUSTER" == "true" ]
 then
   echo "~~~~~~~~~~SEEDING NEW CLUSTER~~~~~~~~~~"
   kubeadm config images pull
-  kubeadm init --control-plane-endpoint=server.local:8443 --pod-network-cidr=10.244.0.0/16
+  kubeadm init --control-plane-endpoint=$API_ENDPOINT --pod-network-cidr=$POD_CIDR
 
   mkdir -p /home/nate/.kube
   cp /etc/kubernetes/admin.conf /home/nate/.kube/config
@@ -80,8 +82,8 @@ then
   kubectl create namespace ingress-nginx
   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
   helm install --set controller.service.type=NodePort \
-    --set controller.service.nodePorts.http=32080 \
-    --set controller.service.nodePorts.https=32443 \
+    --set controller.service.nodePorts.http=30080 \
+    --set controller.service.nodePorts.https=30443 \
     --set controller.allowSnippetAnnotations=true \
     ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx
   
