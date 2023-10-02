@@ -39,7 +39,7 @@ EOF
 sysctl --system
 
 echo "~~~~~~~~~~Adding repositories and downloading required software~~~~~~~~~~"
-apt install -y curl gnupg2 software-properties-common apt-transport-https ca-certificates
+apt install -y curl gnupg2 software-properties-common apt-transport-https ca-certificates nfs-common
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmour -o /etc/apt/trusted.gpg.d/docker.gpg
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
