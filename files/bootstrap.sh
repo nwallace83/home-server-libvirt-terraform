@@ -4,13 +4,17 @@ CONTROL_PLANE=$2
 SEED_HOST=$3
 HOSTNAME=$4
 
-echo "~~~~~~~~~~Adding SSH keys to user~~~~~~~~~~"
+echo "~~~~~~~~~~Adding SSH keys customizing environment~~~~~~~~~~"
 mkdir -p /home/nate/.ssh
 cp /tmp/id_rsa /home/nate/.ssh
+echo "alias k='kubectl'" >> /home/nate/.bashrc
+echo "alias ssh='ssh -o StrictHostKeychecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR'" >> /home/nate/.bashrc
 chown -Rf nate:nate /home/nate
 
 mkdir -p /root/.ssh
 cp /tmp/id_rsa /root/.ssh
+echo "alias k='kubectl'" >> /root/.bashrc
+echo "alias ssh='ssh -o StrictHostKeychecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR'" >> /root/.bashrc
 chown -Rf root:root /root
 
 echo "~~~~~~~~~~Setting up hostname and hosts files~~~~~~~~~~"
@@ -47,6 +51,7 @@ containerd config default | sudo tee /etc/containerd/config.toml >/dev/null 2>&1
 sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
 systemctl restart containerd
 systemctl enable containerd
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
 
 if [ "$CREATE_CLUSTER" == "true" ]
@@ -63,7 +68,6 @@ then
 
   kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/tigera-operator.yaml
   kubectl create -f /tmp/custom-resources.yaml
-  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
   CLUSTER_STATUS="NotReady"
   while [ "$CLUSTER_STATUS" != "Ready" ]
@@ -78,17 +82,22 @@ then
   helm install --set controller.service.type=NodePort \
     --set controller.service.nodePorts.http=32080 \
     --set controller.service.nodePorts.https=32443 \
+    --set controller.allowSnippetAnnotations=true \
     ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx
   
   kubectl create namespace argo-cd
   helm repo add argo-cd https://argoproj.github.io/argo-helm
-  helm install --set server.server.extraArgs="--insecure" argo-cd argo-cd/argo-cd -n argo-cd
-  kubectl apply -f /tmp/arg-ingress.yaml -n argo-cd
+  helm install --set configs.params."server\.insecure"=true argo-cd argo-cd/argo-cd -n argo-cd
   
   kubectl create namespace cert-manager
+  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.1/cert-manager.crds.yaml
   helm repo add cert-manager https://charts.jetstack.io
   helm install cert-manager cert-manager/cert-manager -n cert-manager
 
+  sleep 60
+  kubectl apply -f /tmp/cluster-issuer.yaml
+  kubectl apply -f /tmp/argo-ingress.yaml -n argo-cd
+  echo "ArgoCD password: $(kubectl -n argo-cd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)"
 
   exit 0
 fi

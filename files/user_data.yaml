@@ -1,17 +1,5 @@
 #cloud-config
 # vim: syntax=yaml
-#
-# ***********************
-# 	---- for more examples look at: ------
-# ---> https://cloudinit.readthedocs.io/en/latest/topics/examples.html
-# ******************************
-#
-# This is the configuration syntax that the write_files module
-# will know how to understand. encoding can be given b64 or gzip or (gz+b64).
-# The content will be decoded accordingly and then written to the path that is
-# provided.
-#
-# Note: Content strings here are truncated for example purposes.
 ssh_pwauth: False
 hostname: ${hostname}
 users:
@@ -49,7 +37,12 @@ write_files:
 - encoding: b64
   content: ${argo_ingress}
   owner: root:root
-  path: /tmp/arg-ingress.yaml
+  path: /tmp/argo-ingress.yaml
+  permissions: '0644'
+- encoding: b64
+  content: ${cluster_issuer}
+  owner: root:root
+  path: /tmp/cluster-issuer.yaml
   permissions: '0644'
 
 package_upgrade: true

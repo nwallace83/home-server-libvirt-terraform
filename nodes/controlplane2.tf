@@ -67,6 +67,7 @@
 #     bootstrap_script = filebase64("${path.root}/files/bootstrap.sh")
 #     id_rsa           = filebase64(var.id_rsa)
 #     argo_ingress     = filebase64("${path.root}/files/argo-ingress.yaml")
+#     cluster_issuer   = filebase64("${path.root}/files/cluster-issuer.yaml")
 #     create_cluster   = "false"
 #     control_plane    = "true"
 #     seed_host        = "controlplane1"
