@@ -1,6 +1,6 @@
 resource "libvirt_domain" "controlplane1" {
   name      = "controlplane1.k8s.local"
-  memory    = 2048
+  memory    = 2304
   vcpu      = 2
   autostart = true
 
