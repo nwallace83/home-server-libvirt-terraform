@@ -19,4 +19,11 @@ resource "docker_container" "nginx" {
     internal = 53
     external = 53
   }
+
+  ports {
+    ip = "192.168.0.6"
+    protocol = "udp"
+    internal = 53
+    external = 53
+  }
 }
