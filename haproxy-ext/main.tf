@@ -14,20 +14,8 @@ resource "docker_container" "haproxy-ext" {
   }
 
   ports {
-    ip = "192.168.0.6"
+    ip = "192.168.0.5"
     internal = 80
-    external = 80
-  }
-  
-  ports {
-    ip = "192.168.0.6"
-    internal = 443
-    external = 443
-  }
-
-  ports {
-    ip = "192.168.0.6"
-    internal = 32400
-    external = 32400
+    external = 8080
   }
 }
