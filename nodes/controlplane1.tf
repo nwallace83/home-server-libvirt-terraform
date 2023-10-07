@@ -8,6 +8,15 @@ resource "libvirt_domain" "controlplane1" {
     volume_id = libvirt_volume.controlplane1.id
   }
 
+  
+
+  filesystem {
+    source   = "/kubernetes"
+    target   = "kubernetes"
+    accessmode = "passthrough"
+    readonly = false
+  }
+
   cloudinit = libvirt_cloudinit_disk.disk_controlplane1.id
 
   network_interface {
@@ -54,7 +63,6 @@ resource "libvirt_volume" "controlplane1" {
 resource "libvirt_cloudinit_disk" "disk_controlplane1" {
   name           = "cloud_init_controlplane1.iso"
   user_data      = data.template_file.user_data_controlplane1.rendered
-  network_config = data.template_file.network_config_controlplane1.rendered
   pool           = var.pool
 }
 
@@ -72,8 +80,4 @@ data "template_file" "user_data_controlplane1" {
     control_plane    = "true"
     seed_host        = "controlplane2"
   }
-}
-
-data "template_file" "network_config_controlplane1" {
-  template = file("${path.root}/files/network_config.yaml")
 }

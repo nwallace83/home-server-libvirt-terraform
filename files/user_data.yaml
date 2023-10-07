@@ -49,4 +49,4 @@ package_upgrade: true
 
 runcmd:
 - chmod +x /tmp/bootstrap.sh
-- /tmp/bootstrap.sh ${create_cluster} ${control_plane} ${seed_host} ${hostname} >> /var/log/bootstrap.log 2>&1
+- /tmp/bootstrap.sh ${create_cluster} ${control_plane} ${seed_host} ${hostname}

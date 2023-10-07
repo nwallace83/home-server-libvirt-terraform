@@ -8,6 +8,13 @@ resource "libvirt_domain" "controlplane3" {
     volume_id = libvirt_volume.controlplane3.id
   }
 
+  filesystem {
+    source   = "/kubernetes"
+    target   = "kubernetes"
+    accessmode = "passthrough"
+    readonly = false
+  }
+
   cloudinit = libvirt_cloudinit_disk.disk_controlplane3.id
 
   network_interface {
@@ -54,7 +61,6 @@ resource "libvirt_volume" "controlplane3" {
 resource "libvirt_cloudinit_disk" "disk_controlplane3" {
   name           = "cloud_init_controlplane3.iso"
   user_data      = data.template_file.user_data_controlplane3.rendered
-  network_config = data.template_file.network_config_controlplane3.rendered
   pool           = var.pool
 }
 
@@ -74,6 +80,3 @@ data "template_file" "user_data_controlplane3" {
   }
 }
 
-data "template_file" "network_config_controlplane3" {
-  template = file("${path.root}/files/network_config.yaml")
-}
