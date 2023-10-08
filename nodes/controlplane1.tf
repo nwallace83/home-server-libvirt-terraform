@@ -8,8 +8,6 @@ resource "libvirt_domain" "controlplane1" {
     volume_id = libvirt_volume.controlplane1.id
   }
 
-  
-
   filesystem {
     source   = "/kubernetes"
     target   = "kubernetes"

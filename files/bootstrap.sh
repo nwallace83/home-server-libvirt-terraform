@@ -179,7 +179,7 @@ else
   if [ $MEMBER_EXISTS -eq 1 ]
   then
     echo "Member already exists in etcd, attempting to remove"
-    MEMBER_ID=$(etcdctl member list | grep $HOSTNAME | awk '{print $1}' | sed 's/,//g')
+    MEMBER_ID=$(etcdctl $ETCD_FLAGS member list | grep $HOSTNAME | awk '{print $1}' | sed 's/,//g')
     etcdctl $ETCD_FLAGS member remove $MEMBER_ID
   fi
 

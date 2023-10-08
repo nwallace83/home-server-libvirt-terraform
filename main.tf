@@ -1,7 +1,7 @@
 resource "libvirt_pool" "home_server" {
   name = "home-server"
   type = "dir"
-  path = "/shared2/VMs"
+  path = "/disk1/VMs"
 }
 
 # ####################################################################################################
@@ -30,7 +30,7 @@ resource "libvirt_network" "home-server" {
 resource "libvirt_volume" "ubuntu_base" {
   name   = "jammy-server-cloudimg-amd64-2023-10-06.img"
   source = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-  pool   = "home-server"
+  pool   = libvirt_pool.home_server.name
 }
 
 ####################################################################################################

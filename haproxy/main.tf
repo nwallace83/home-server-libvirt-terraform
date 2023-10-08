@@ -1,5 +1,10 @@
+data "docker_registry_image" "haproxy" {
+  name = "haproxy:2.8.3-alpine"
+}
+
 resource "docker_image" "haproxy" {
-  name = "haproxy:latest"
+  name = data.docker_registry_image.haproxy.name
+  pull_triggers = [ data.docker_registry_image.haproxy.sha256_digest ]
 }
 
 resource "docker_container" "haproxy" {
