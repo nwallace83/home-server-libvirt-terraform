@@ -12,6 +12,8 @@ resource "docker_container" "haproxy" {
   image = docker_image.haproxy.name
   restart = "always"
 
+  env = [ "PUID=1000","GUID=1000" ]
+
   volumes {
     container_path = "/usr/local/etc/haproxy/haproxy.cfg"
     host_path = "/etc/haproxy.cfg"

@@ -12,6 +12,8 @@ resource "docker_container" "nginx" {
   image = docker_image.nginx.name
   restart = "always"
 
+  env = [ "PUID=1000","GUID=1000" ]
+
   volumes {
     container_path = "/etc/nginx/nginx.conf"
     host_path = "/etc/nginx.conf"
