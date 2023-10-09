@@ -85,8 +85,11 @@ if [ "$CREATE_CLUSTER" == "true" ]; then
 
   export KUBECONFIG=/etc/kubernetes/admin.conf
 
-  kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/tigera-operator.yaml
-  kubectl create -f /tmp/custom-resources.yaml
+  kubectl create ns kube-flannel
+  kubectl label --overwrite ns kube-flannel pod-security.kubernetes.io/enforce=privileged
+
+  helm repo add flannel https://flannel-io.github.io/flannel/
+  helm install flannel --set podCidr="10.244.0.0/16" --namespace kube-flannel flannel/flannel
 
   CLUSTER_STATUS="NotReady"
   while [ "$CLUSTER_STATUS" != "Ready" ]; do
@@ -94,6 +97,19 @@ if [ "$CREATE_CLUSTER" == "true" ]; then
     CLUSTER_STATUS=$(kubectl get nodes | grep $HOSTNAME | awk '{ print $2 }' 2>/dev/null)
     sleep 5
   done
+
+  echo "~~~~~~~~~~INSTALLING ETCD CLIENT~~~~~~~~~~"
+  RELEASE=$(curl -s https://api.github.com/repos/etcd-io/etcd/releases/latest|grep tag_name | cut -d '"' -f 4)
+  wget https://github.com/etcd-io/etcd/releases/download/${RELEASE}/etcd-${RELEASE}-linux-amd64.tar.gz
+  tar xvf etcd-${RELEASE}-linux-amd64.tar.gz
+  mv etcd-${RELEASE}-linux-amd64/etcd /usr/local/bin
+  mv etcd-${RELEASE}-linux-amd64/etcdctl /usr/local/bin
+  mv etcd-${RELEASE}-linux-amd64/etcdutl /usr/local/bin
+  rm etcd-${RELEASE}-linux-amd64.tar.gz
+  rm -Rf etcd-${RELEASE}-linux-amd64
+  echo "export ETCDCTL_API=3" >> /root/.bashrc
+  ETCDCTL_CMD="etcdctl --endpoints=https://controlplane1:2379,https://controlplane2:2379,https://controlplane3:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key"
+  echo "alias etcdctl='$ETCDCTL_CMD'" >> /root/.bashrc
 
   kubectl create namespace ingress-nginx
   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
@@ -118,6 +134,7 @@ if [ "$CREATE_CLUSTER" == "true" ]; then
   echo "ArgoCD password: $(kubectl -n argo-cd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)"
 
   exit 0
+  reboot
 fi
 
 echo "~~~~~~~~~~JOINING CLUSTER~~~~~~~~~~"

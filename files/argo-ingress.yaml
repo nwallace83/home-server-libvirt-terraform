@@ -11,8 +11,8 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - '*.nwallace.io'
-      secretName: nwallace.io-tls-secret
+        - 'argocd.nwallace.io'
+      secretName: argocd-nwallace.io-tls-secret
   rules:
     - host: argocd.nwallace.io
       http:
